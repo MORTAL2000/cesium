@@ -35,8 +35,18 @@ define([
             throw new RuntimeError('Invalid KTX file.');
         }
 
-        var view = new DataView(data);
-        var byteOffset = 12; // skip identifier
+        var view;
+        var byteOffset;
+
+        if (defined(data.buffer)) {
+            view = new DataView(data.buffer);
+            byteOffset = data.byteOffset;
+        } else {
+            view = new DataView(data);
+            byteOffset = 0;
+        }
+
+        byteOffset += 12; // skip identifier
 
         var endianness = view.getUint32(byteOffset, true);
         byteOffset += sizeOfUint32;

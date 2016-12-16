@@ -1412,16 +1412,12 @@ define([
                 // Image references either uri (external or base64-encoded) or bufferView
                 if (defined(gltfImage.extensions) && defined(gltfImage.extensions.KHR_binary_glTF)) {
                     var binary = gltfImage.extensions.KHR_binary_glTF;
-                    if (binary.mimeType === 'image/ktx') {
-                        loadKTX(model._loadResources.getBuffer(binary.bufferView)).then(imageLoad(model, id));
-                    } else {
-                        model._loadResources.texturesToCreateFromBufferView.enqueue({
-                            id : id,
-                            image : undefined,
-                            bufferView : binary.bufferView,
-                            mimeType : binary.mimeType
-                        });
-                    }
+                    model._loadResources.texturesToCreateFromBufferView.enqueue({
+                        id : id,
+                        image : undefined,
+                        bufferView : binary.bufferView,
+                        mimeType : binary.mimeType
+                    });
                 } else {
                     ++model._loadResources.pendingTextureLoads;
                     var uri = new Uri(gltfImage.uri);
@@ -1969,12 +1965,17 @@ define([
             var gltf = model.gltf;
             var bufferView = gltf.bufferViews[gltfTexture.bufferView];
 
-            var onload = getOnImageCreatedFromTypedArray(loadResources, gltfTexture);
             var onerror = getFailedLoadFunction(model, 'image', 'id: ' + gltfTexture.id + ', bufferView: ' + gltfTexture.bufferView);
-            loadImageFromTypedArray(loadResources.getBuffer(bufferView), gltfTexture.mimeType).
-                then(onload).otherwise(onerror);
 
-            ++loadResources.pendingBufferViewToImage;
+            if (gltfTexture.mimeType === 'image/ktx') {
+                loadKTX(loadResources.getBuffer(bufferView)).then(imageLoad(model, gltfTexture.id)).otherwise(onerror);
+                ++model._loadResources.pendingTextureLoads;
+            } else {
+                var onload = getOnImageCreatedFromTypedArray(loadResources, gltfTexture);
+                loadImageFromTypedArray(loadResources.getBuffer(bufferView), gltfTexture.mimeType)
+                    .then(onload).otherwise(onerror);
+                ++loadResources.pendingBufferViewToImage;
+            }
         }
     }
 
